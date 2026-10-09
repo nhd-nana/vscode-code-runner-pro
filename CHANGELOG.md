@@ -1,3 +1,16 @@
+### 0.13.0 (2026-10-09)
+本 fork（[vscode-code-runner-pro](https://github.com/nhd-nana/vscode-code-runner-pro)）的首个版本，在 0.12.2 基础上扩展：
+
+* 支持非文本文件（docx / exe / pdf 等）：文件无法按文本读取时直接按路径运行
+* 同一目标可配多条命令，点小三角时弹选择（上次使用的置顶）；值可以是数组或 `{label, command, description}`
+* `executorMapByFileExtension` 支持多段后缀（`.x64.s`），最长后缀优先
+* Alt 多选：把所有选区按文档顺序拼接成一个临时文件（`multiSelectionMode`）
+* `matchOrder`：匹配步骤顺序可配（默认“具体优先”）
+* 新命令：解释当前文件是怎么被匹配的 / 查看 扩展名 → 语言 对照表
+* `showTempCode`（打印临时文件内容）/ `deleteTempFileAfterRun`
+* 设置界面本地化（`package.nls.json` / `package.nls.zh-cn.json`）
+* 移除上游遥测；自有图标；README 重写（中文 / 英文）
+
 ### 0.12.2 (2024-04-05)
 * Add support for Erlang
 * Add support for SPWN

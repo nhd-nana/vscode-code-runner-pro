@@ -8,11 +8,14 @@ assignees: ''
 ---
 
 <!-- Please search existing issues to avoid creating duplicates. -->
-<!-- FYI issues: https://github.com/formulahendry/vscode-code-runner/issues?utf8=%E2%9C%93&q=is%3Aissue+label%3Afyi -->
 
 - VS Code Version:
 - OS Version:
-- Code Runner Version:
+- Code Runner Pro Version:
+- **Output of the command "Explain How This File Is Matched"** (it prints the file, every matching step and environment info):
+  ```
+  
+  ```
 
 **Describe the bug**
 Description of what the bug is.

@@ -1,9 +1,24 @@
+# 开发 / 构建产物
 .vscode/**
-typings/**
-out/test/**
+.github/**
+_tmp/**
 test/**
+out/test/**
 src/**
+typings/**
 **/*.map
-.gitignore
 tsconfig.json
-vsc-extension-quickstart.md
+tslint.json
+.travis.yml
+
+# 仓库文件，不需要进 vsix
+package-lock.json
+改造需求.md
+
+# 上游遗留、本项目不再引用
+BACKERS.md
+images/alipay.png
+images/book.jpg
+images/WeChatPublicAccount.jpg
+images/usage.gif
+images/usageRunByLanguage.gif

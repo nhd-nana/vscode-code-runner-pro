@@ -1,222 +1,134 @@
-# Code Runner
+# Code Runner Pro
 
-[![Join the chat at https://gitter.im/formulahendry/vscode-code-runner](https://badges.gitter.im/formulahendry/vscode-code-runner.svg)](https://gitter.im/formulahendry/vscode-code-runner?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) ![Downloads](https://img.shields.io/visual-studio-marketplace/d/formulahendry.code-runner) ![Rating](https://img.shields.io/visual-studio-marketplace/r/formulahendry.code-runner) [![Actions Status](https://github.com/formulahendry/vscode-code-runner/actions/workflows/main.yml/badge.svg)](https://github.com/formulahendry/vscode-code-runner/actions/workflows/main.yml)
+运行代码片段或整个文件，覆盖 50 多种语言，并且**支持 docx / exe / pdf 这类非文本文件**。
 
-Run code snippet or code file for multiple languages: **C, C++, Java, JavaScript, PHP, Python, Perl, Perl 6, Ruby, Go, Lua, Groovy, PowerShell, BAT/CMD, BASH/SH, F# Script, F# (.NET Core), C# Script, C# (.NET Core), VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml Script, R, AppleScript, Elixir, Visual Basic .NET, Clojure, Haxe, Objective-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Free Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Ring, Standard ML, Zig, Mojo, Erlang, SPWN, Pkl, Gleam**, and custom command
+> 本项目是 [formulahendry/vscode-code-runner](https://github.com/formulahendry/vscode-code-runner)（作者 Jun Han，MIT）的 fork。
+> **配置键沿用 `code-runner.*`**（已有配置零迁移），**命令 ID 独立为 `crun.*`**（可与原版共存，不会互相抢占）。
+> English: [README.en.md](README.en.md)
 
-## Book for VS Code
+## 相比原版多出来的能力
 
-[《Visual Studio Code 权威指南》](https://union-click.jd.com/jdc?e=jdext-1261348777639735296-0&p=AyIGZRhbHQsWAVIaXxEyEgRdG1sRBxU3EUQDS10iXhBeGlcJDBkNXg9JHUlSSkkFSRwSBF0bWxEHFRgMXgdIMkRxFAUJD1RQZT0cBnwKDE4%2BaDpgB2ILWStbHAIQD1QaWxIBIgdUGlsRBxEEUxprJQIXNwd1g6O0yqLkB4%2B%2FjcePwitaJQIWD1cfWhwKGwVSG1wlAhoDZc31gdeauIyr%2FsOovNLYq46cqca50ytrJQEiXABPElAeEgRSG1kQCxQBUxxZHQQQA1YTXAkDIgdUGlscChECXRs1FGwSD1UbWRALFwRWK1slASJZOxoLRlUXU1NONU9QEkdXWRlJbBUDVB9TFgAVN1caWhcA)：带你深入浅出 VS Code！
+| 能力 | 说明 |
+|---|---|
+| **非文本文件** | docx / exe / pdf / xlsx 等也能运行。原版必须先 `openTextDocument`，二进制文件会让命令直接中断；本 fork 改成"能读内容就读，读不到就只用路径"，自定义编辑器（Office Viewer）里的文件同样可用 |
+| **多命令** | 同一目标可配多条命令，点小三角时弹选择（上次执行的置顶）。值支持 `"命令"` / `["命令1","命令2"]` / `[{label, description, command}]` |
+| **多段后缀** | `executorMapByFileExtension` 支持 `.x64.s` 这类多段后缀，**最长后缀优先**（`.x64.s` 赢过 `.s`），不区分大小写、不依赖书写顺序 |
+| **Alt 多选区** | 原版只取主选区；本 fork 把所有非空选区**按文档顺序原样拼接**成一个临时文件 |
+| **可配匹配顺序** | `matchOrder` 决定各匹配层的先后，默认"具体优先" |
+| **诊断命令** | `解释当前文件是怎么被匹配的`（输出可直接贴进 Issue）、`查看 扩展名 → 语言 对照表` |
+| **可观测性** | `showTempCode` 把临时文件内容打印到输出面板；`deleteTempFileAfterRun` 跑完删除临时文件 |
+| **本地化** | 设置界面与命令面板跟随 VS Code 的显示语言（`package.nls*.json`） |
+| **无遥测** | 上游会把运行事件上报到作者自己的 Application Insights 账号，本 fork 已彻底移除 |
 
-![Book](images/book.jpg)
+## 基本用法
 
-## WeChat Official Account
+| 想做的事 | 怎么做 |
+|---|---|
+| 运行整个文件 | 编辑器右上角的 ▶，或 `Ctrl+Alt+N` |
+| 只运行选中片段 | 选中后同样操作；**Alt 多选**可以拼多段 |
+| 运行资源管理器里的文件 | 在文件上右键 → `Run Code` |
+| 换个语言运行当前文件 | 命令面板 → `按语言运行` |
+| 停止 | `Ctrl+Alt+M` |
+| 搞清楚"为什么跑了这条命令" | 命令面板 → `解释当前文件是怎么被匹配的` |
 
-VS Code 的热门文章、使用技巧、插件推荐、插件开发攻略等，请关注“**玩转VS Code**”公众号！
+### 多选区运行
 
-![WeChat](images/WeChatPublicAccount.jpg)
+用 Alt 点击 / Alt 拖选选中多处，然后运行：所有非空选区会**按文档顺序原样拼接**成一个临时文件，**不做任何上下文注入**。需要 `#include`、命名空间、前面的类型定义时，把它们一起选上就行 —— 由你决定拼接什么，比工具猜依赖可靠得多。
 
-## Donation
+`multiSelectionMode` 设为 `primary` 可退回原版行为（只用主选区）。
 
-If you like this extension, you could become a backer or sponsor via **[Patreon](https://www.patreon.com/junhan)**, donate via **[PayPal](https://www.paypal.me/junhanme)**, or scan below QR code to donate via **Alipay**. Any amount is welcome. It will encourage me to make this extension better and better!
+### 选区运行的临时文件
 
-![Alipay](images/alipay.png)
+- 后缀**完全沿用原文件后缀**（无后缀的文件就生成无后缀的临时文件），因此临时文件与原文件行为一致：原文件跑不了，临时文件也跑不了，那说明配置有问题，直接修配置。
+- `temporaryFileName` 控制基名（默认 `tempCodeRunnerFile`）。
+- `deleteTempFileAfterRun`（默认开）跑完删除；终端模式下会在同一个 shell 里紧接着追加一条删除命令。
+- `showTempCode` 打开后会把生成内容打印到 `Code Runner Pro` 输出面板，便于核对。
 
-## Features
+## 匹配顺序
 
-* Run code file of current active Text Editor
-* Run code file through context menu of file explorer
-* Run selected code snippet in Text Editor
-* Run code per Shebang
-* Run code per filename glob
-* Run custom command
-* Stop code running
-* View output in Output Window
-* Set default language to run
-* Select language to run
-* Support REPL by running code in Integrated Terminal
+前一步命中就停止，默认按 **"具体优先"** 排列：
 
-## Usages
-
-* To run code:
-  * use shortcut `Ctrl+Alt+N`
-  * or press `F1` and then select/type `Run Code`, 
-  * or right click the Text Editor and then click `Run Code` in editor context menu
-  * or click `Run Code` button in editor title menu
-  * or click `Run Code` button in context menu of file explorer
-* To stop the running code:
-  * use shortcut `Ctrl+Alt+M`
-  * or press `F1` and then select/type `Stop Code Run`
-  * or click `Stop Code Run` button in editor title menu
-  * or right click the Output Channel and then click `Stop Code Run` in context menu
-
-![Usage](images/usage.gif)
-
-* To select language to run, use shortcut `Ctrl+Alt+J`, or press `F1` and then select/type `Run By Language`, then type or select the language to run: e.g `php, javascript, bat, shellscript...`
-
-![Usage](images/usageRunByLanguage.gif)
-
-* To run custom command, then use shortcut `Ctrl+Alt+K`, or press `F1` and then select/type `Run Custom Command`
-
-## Configuration
-
-Make sure the executor PATH of each language is set in the environment variable.
-You could also add entry into `code-runner.executorMap` to set the executor PATH.
-e.g. To set the executor PATH for ruby, php and html:
-```json
-{
-    "code-runner.executorMap": {
-        "javascript": "node",
-        "php": "C:\\php\\php.exe",
-        "python": "python",
-        "perl": "perl",
-        "ruby": "C:\\Ruby23-x64\\bin\\ruby.exe",
-        "go": "go run",
-        "html": "\"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\"",
-        "java": "cd $dir && javac $fileName && java $fileNameWithoutExt",
-        "c": "cd $dir && gcc $fileName -o $fileNameWithoutExt && $dir$fileNameWithoutExt"
-    }
-}
 ```
-**Supported customized parameters**
-  * $workspaceRoot: The path of the folder opened in VS Code
-  * $dir: The directory of the code file being run
-  * $dirWithoutTrailingSlash: The directory of the code file being run without a trailing slash
-  * $fullFileName: The full name of the code file being run
-  * $fileName: The base name of the code file being run, that is the file without the directory
-  * $fileNameWithoutExt: The base name of the code file being run without its extension
-  * $driveLetter: The drive letter of the code file being run (Windows only)
-  * $pythonPath: The path of Python interpreter (set by `Python: Select Interpreter` command)
+shebang → glob → extension → language → default
+```
 
-**Please take care of the back slash and the space in file path of the executor**
-  * Back slash: please use `\\`
-  * If there ares spaces in file path, please use `\"` to surround your file path
+| 步骤 | 匹配依据 | 配置来源 | 适合管什么 |
+|---|---|---|---|
+| `shebang` | 文件首行 `#!` | — | 自带解释器的脚本 |
+| `glob` | 完整文件名（micromatch） | `executorMapByGlob` | `Makefile`、`pom.xml`、`*.test.py` |
+| `extension` | 文件名末尾后缀（最长优先） | `executorMapByFileExtension` | 同语言的不同变体（`.x64.s` / `.mips.s` / `.s`） |
+| `language` | VS Code 认定的语言 id | `executorMap` | 一种语言统一怎么跑（粒度最粗） |
+| `default` | 兜底语言 | `executorMap[defaultLanguage]` | 都没命中时 |
 
-You could set the executor per filename [glob](https://en.wikipedia.org/wiki/Glob_(programming)):
-```json
-{
-    "code-runner.executorMapByGlob": {
-        "pom.xml": "cd $dir && mvn clean package",
-        "*.test.js": "tap",
-        "*.js": "node"
-    }
+`matchOrder` 就是**一个字符串**，用逗号或空格分隔，可以整体改写；**留空表示使用默认顺序**：
+
+```jsonc
+// 默认（具体优先）
+"code-runner.matchOrder": "shebang, glob, extension, language, default"
+
+// 回到上游语义（语言先于后缀）
+"code-runner.matchOrder": "shebang, glob, language, extension, default"
+```
+
+未列出的步骤会自动按默认顺序补在末尾；非法项与重复项被忽略。不确定某个文件走了哪一步？跑一次 `解释当前文件是怎么被匹配的`。
+
+> 典型坑：把 `.asm` 和 `.x64.s` 都关联到 `assembly` 语言后，`executorMap["assembly"]` 会把 `.x64.s` 截胡 —— 让 `extension` 排在 `language` 前面（默认如此）即可。
+
+## 配置
+
+### 三张表
+
+| 配置 | 维度 | 说明 |
+|---|---|---|
+| `executorMap` | 语言 id | 与上游一致；**值也可以写成数组**来实现多命令 |
+| `executorMapByFileExtension` | 文件后缀 | 支持多段后缀，最长后缀优先 |
+| `executorMapByGlob` | 文件名 glob | micromatch，第一个命中生效（具体模式写前面） |
+
+### 多命令
+
+```jsonc
+"code-runner.executorMapByFileExtension": {
+  ".docx": [
+    { "label": "转 Markdown", "description": "同目录", "command": "pandoc $fullFileName -o $fileNameWithoutExt.md" },
+    { "label": "转 PDF", "description": "soffice", "command": "soffice --convert-to pdf $fullFileName" }
+  ]
 }
 ```
 
-Besides, you could set the default language to run:
-```json
-{
-    "code-runner.defaultLanguage": "javascript"
-}
-```
-**For the default language:** It should be set with language id defined in [VS Code](https://github.com/Microsoft/vscode/tree/master/extensions). The languages you could set are `java, c, cpp, javascript, php, python, perl, ruby, go, lua, groovy, powershell, bat, shellscript, fsharp, csharp, vbscript, typescript, coffeescript, swift, r, clojure, haxe, objective-c, rust, racket, ahk, autoit, kotlin, dart, pascal, haskell, nim, d, lisp`
+命中多条时的行为由 `multiActionBehavior` 决定：`pick`（默认，弹选择且上次的置顶）、`last`（直接用上次）、`first`（直接用第一条）。
 
-Also, you could set the executor per file extension:
-```json
-{
-    "code-runner.executorMapByFileExtension": {
-        ".vbs": "cscript //Nologo"
-    }
-}
-```
+### 变量
 
-To set the custom command to run:
-```json
-{
-    "code-runner.customCommand": "echo Hello"
-}
-```
+`$fileName` `$fileNameWithoutExt` `$fullFileName` `$dir` `$dirWithoutTrailingSlash` `$workspaceRoot` `$pythonPath` `$driveLetter`
 
-To set the the working directory:
-```json
-{
-    "code-runner.cwd": "path/to/working/directory"
-}
-```
+（与原版一致；`$dir`、`$dirWithoutTrailingSlash`、`$fullFileName` 会自动加引号。）
 
-To set whether to clear previous output before each run (default is false):
-```json
-{
-    "code-runner.clearPreviousOutput": false
-}
-```
+### 常用配置
 
-To set whether to save all files before running (default is false):
-```json
-{
-    "code-runner.saveAllFilesBeforeRun": false
-}
-```
+全部 26 个配置项的说明都能在 VS Code 设置里看到（跟随显示语言）。常见几个：
 
-To set whether to save the current file before running (default is false):
-```json
-{
-    "code-runner.saveFileBeforeRun": false
-}
-```
+| 配置 | 默认 | 说明 |
+|---|---|---|
+| `runInTerminal` | false | 在集成终端里运行（而不是输出面板） |
+| `fileDirectoryAsCwd` | false | 以文件所在目录为工作目录 |
+| `saveFileBeforeRun` | false | 运行前保存当前文件 |
+| `clearPreviousOutput` | false | 每次运行前清空上一次输出 |
+| `respectShebang` | true | 识别 shebang 并用作命令 |
 
-To set whether to show extra execution message like [Running] ... and [Done] ... (default is true):
-```json
-{
-    "code-runner.showExecutionMessage": true
-}
-```
+## 与上游原版的兼容性
 
-**[REPL support]** To set whether to run code in Integrated Terminal (only support to run whole file in Integrated Terminal, neither untitled file nor code snippet) (default is false):
-```json
-{
-    "code-runner.runInTerminal": false
-}
-```
+| 层 | 做法 | 结果 |
+|---|---|---|
+| 配置 | 共用 `code-runner.*` | 两边配置互通，零迁移 |
+| 命令 | 主 ID `crun.*`；**原版未安装或已禁用时**额外注册 `code-runner.*` 别名 | 你自己绑的键位、`tasks.json`、脚本里的 `code-runner.run` 依旧可用；共存也不互相抢注 |
+| 提示 | 检测到原版仍启用时提示一次 | 避免编辑器右上角出现两个一样的运行按钮 |
 
-To set whether to preserve focus on code editor after code run is triggered (default is true, the code editor will keep focus; when it is false, Terminal or Output Channel will take focus):
-```json
-{
-    "code-runner.preserveFocus": true
-}
-```
+## 支持的语言
 
-`code-runner.ignoreSelection`: Whether to ignore selection to always run entire file. (Default is **false**)
+C, C++, Java, JavaScript, PHP, Python, Perl, Ruby, Go, Lua, Groovy, PowerShell, BAT/CMD, BASH/SH, F#, C#, VBScript, TypeScript, CoffeeScript, Scala, Swift, Julia, Crystal, OCaml, R, AppleScript, Elixir, VB.NET, Clojure, Haxe, Objective-C, Rust, Racket, Scheme, AutoHotkey, AutoIt, Kotlin, Dart, Free Pascal, Haskell, Nim, D, Lisp, Kit, V, SCSS, Sass, CUDA, Less, Fortran, Standard ML, Zig, Mojo, Erlang, Gleam …以及自定义命令。
 
-`code-runner.showRunIconInEditorTitleMenu`: Whether to show 'Run Code' icon in editor title menu. (Default is **true**)
+## 致谢与许可
 
-`code-runner.showRunCommandInEditorContextMenu`: Whether to show 'Run Code' command in editor context menu. (Default is **true**)
-
-`code-runner.showRunCommandInExplorerContextMenu`: Whether to show 'Run Code' command in explorer context menu. (Default is **true**)
-
-`code-runner.showStopIconInEditorTitleMenu`: Whether to show 'Stop Code Run' icon in editor title menu when code is running. (Default is **true**)
-
-`code-runner.terminalRoot`: For Windows system, replaces the Windows style drive letter in the command with a Unix style root when using a custom shell as the terminal, like Bash or Cgywin. Example: Setting this to `/mnt/` will replace `C:\path` with `/mnt/c/path` (Default is **""**)
-
-`code-runner.temporaryFileName`: Temporary file name used in running selected code snippet. When it is set as empty, the file name will be random. (Default is **"tempCodeRunnerFile"**)
-
-`code-runner.respectShebang`: Whether to respect Shebang to run code. (Default is **true**)
-
-## About CWD Setting (current working directory)
-1. By default, use the `code-runner.cwd` setting
-2. If `code-runner.cwd` is not set and `code-runner.fileDirectoryAsCwd` is `true`, use the directory of the file to be executed
-3. If `code-runner.cwd` is not set and `code-runner.fileDirectoryAsCwd` is `false`, use the path of root folder that is open in VS Code
-4. If no folder is open, use the os temp folder
-
-## Note
-* For Objective-C, it is only supported on macOS
-* To run C# script, you need to install [scriptcs](http://scriptcs.net/)
-* To run TypeScript, you need to install [ts-node](https://github.com/TypeStrong/ts-node)
-* To run Clojure, you need to install [Leiningen](https://leiningen.org/) and [lein-exec](https://github.com/kumarshantanu/lein-exec)
-
-## Telemetry data
-By default, telemetry data collection is turned on to understand user behavior to improve this extension. To disable it, update the settings.json as below:
-```json
-{
-    "code-runner.enableAppInsights": false
-}
-```
-
-## Change Log
-See Change Log [here](CHANGELOG.md)
-
-## Issues
-Submit the [issues](https://github.com/formulahendry/vscode-code-runner/issues) if you find any bug or have any suggestion.
-
-## Contribution
-Fork the [repo](https://github.com/formulahendry/vscode-code-runner) and submit pull requests.
+- 上游项目：[formulahendry/vscode-code-runner](https://github.com/formulahendry/vscode-code-runner)，作者 Jun Han，MIT 许可。
+- 本 fork 同样以 MIT 许可发布；上游的版权声明保留在 `LICENSE` 中。
+- 图标为本项目自制，不使用上游的品牌图形。

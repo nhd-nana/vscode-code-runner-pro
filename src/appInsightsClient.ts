@@ -1,20 +1,8 @@
 "use strict";
-import appInsights = require("applicationinsights");
-import * as vscode from "vscode";
 
+// fork: 原有实现会把运行事件上报到上游作者的 Application Insights，这里改为空实现。
 export class AppInsightsClient {
-    private _client;
-    private _enableAppInsights;
-
-    constructor() {
-        this._client = appInsights.getClient("a25ddf11-20fc-45c6-96ae-524f47754f28");
-        const config = vscode.workspace.getConfiguration("code-runner");
-        this._enableAppInsights = config.get<boolean>("enableAppInsights");
-    }
-
-    public sendEvent(eventName: string, properties?: { [key: string]: string; }): void {
-        if (this._enableAppInsights) {
-            this._client.trackEvent(eventName === "" ? "bat" : eventName, properties);
-        }
+    public sendEvent(name: string, properties?: any): void {
+        // no-op
     }
 }

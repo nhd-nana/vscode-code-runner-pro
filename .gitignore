@@ -3,3 +3,7 @@ npm-debug.log
 out
 node_modules
 *.vsix
+# 本地文档
+改造需求.md
+
+_tmp/
